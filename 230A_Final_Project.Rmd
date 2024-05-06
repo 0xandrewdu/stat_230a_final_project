@@ -45,6 +45,29 @@ summary_volunteer_data
 ```
 
 ```{r}
+compare_logit_probit <- function(formula, data, robust=FALSE, ehw_type="HC1") {
+  model_probit <- probitmfx(formula, data=data, robust=robust, robust_type=ehw_type)
+  model_logit <- logitmfx(formula, data=data, robust=robust, robust_type=ehw_type)
+  
+  if (robust) {
+    cat("probit model average marginal effect with", ehw_type, "error:", "\n")
+    print(model_probit$mfxest)
+    cat("logit model average marginal effect with", ehw_type, "error:", "\n")
+    print(model_logit$mfxest)
+  } else {
+    cat("probit model average marginal effect with standard error:", "\n")
+    print(model_probit$mfxest)
+    cat("logit model average marginal effect with standard error:", "\n")
+    print(model_logit$mfxest)
+  }
+}
+```
+
+```{r}
+compare_logit_probit(volunteer ~ children, data = summary_volunteer_data, robust=TRUE, ehw_type="HC1")
+```
+
+```{r}
 # Column (1): dprobit volunteer children
 model1 <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "probit"))
 model1_logistic <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "logit"))
