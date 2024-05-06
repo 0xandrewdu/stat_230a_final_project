@@ -6,15 +6,76 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
+library(foreign)
+library(knitr)
+library(kableExtra)
+library(sandwich)
+library(haven)
+library(lmtest)
+library(MASS)
+library(mfx)
+library(prediction)
 knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+setwd('/Users/du/Documents/sp24/stat230a/final_project/wfh')
+install.packages("/Users/du/Documents/sp24/stat230a/final_project/wfh/prediction_0.3.17.tar.gz", type = "source", repos = NULL)
+install.packages("/Users/du/Documents/sp24/stat230a/final_project/wfh/margins_0.3.26.1.tar.gz", type = "source", repos = NULL)
+library(prediction)
+library(margins)
 ```
 
 ## Table 1
 
-Redoing analyses from table 1, but with
+Redoing analyses from table 1, but with logit regression and robust standard error for all
 
-```{r cars}
-summary(cars)
+Original table:
+
+```{r table 1}
+summary_volunteer_data <- read.dta("data/summary_volunteer.dta")
+summary_volunteer_data$children <- ifelse(summary_volunteer_data$children == "yes", 1.0, 0.0)
+summary_volunteer_data$bedroom <- ifelse(summary_volunteer_data$bedroom == "yes", 1.0, 0.0)
+summary_volunteer_data
+```
+
+```{r}
+# Column (1): dprobit volunteer children
+model1 <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "probit"))
+model1_logistic <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "logit"))
+model1_mfx <- probitmfx(volunteer ~ children, data = summary_volunteer_data)
+
+# Column (2): dprobit volunteer married
+model2 <- glm(volunteer ~ married, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+# Column (3): dprobit volunteer children married commute bedroom
+model3 <- glm(volunteer ~ children + married + commute + bedroom, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+# Column (4): dprobit volunteer children married commute bedroom high_educ tenure
+model4 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+# Column (5): dprobit volunteer children married commute bedroom high_educ tenure grosswage
+model5 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure + grosswage, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+# Column (6): dprobit volunteer grosswage
+model6 <- glm(volunteer ~ grosswage, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+# Column (7): dprobit volunteer children married commute bedroom high_educ tenure grosswage age men
+model7 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure + grosswage + age + men, data = summary_volunteer_data, family = binomial(link = "probit"))
+
+print(coeftest(model1, vcov = vcovHC(model1, type="HC1")))
+
+print(coeftest(model1_logistic, vcov = vcovHC(model1, type="HC1")))
+
+marginal_effects <- margins(model1)
+#print(marginal_effects)
+print(model1_mfx$mfxest)
+
+print(coeftest(model2, vcov = vcovHC(model2, type="HC1")))
+print(coeftest(model3, vcov = vcovHC(model3, type="HC1")))
+print(coeftest(model4, vcov = vcovHC(model4, type="HC1")))
+print(coeftest(model5, vcov = vcovHC(model5, type="HC1")))
+print(coeftest(model6, vcov = vcovHC(model6, type="HC1")))
 ```
 
 ## Including Plots

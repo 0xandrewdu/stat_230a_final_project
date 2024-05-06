@@ -9,6 +9,27 @@ cap log close
 log using WFH_august18,replace t	
 
 ************************************************************************************************************************************
+//Table 0
+use summary_volunteer.dta, clear
+*col (1) 
+probit volunteer children, robust
+*col (2) 
+probit volunteer married, robust
+*col (3) 
+probit volunteer children married commute bedroom, robust
+*col (4) 
+probit volunteer children married commute bedroom high_educ tenure, robust
+*col (5) 
+probit volunteer children married commute bedroom high_educ tenure grosswage
+*col (6) 
+probit volunteer grosswage
+*col (7) 
+probit volunteer children married commute bedroom high_educ tenure grosswage age men
+*sample mean
+sum children married commute bedroom high_educ tenure grosswage age men
+************************************************************************************************************************************
+
+************************************************************************************************************************************
 //Table 1. Characteristics of employees who volunteer to join WFH
 use summary_volunteer.dta, clear
 *col (1) 
