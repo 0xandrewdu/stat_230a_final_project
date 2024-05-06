@@ -26,6 +26,11 @@ library(prediction)
 library(margins)
 ```
 
+```{r}
+library(devtools)
+load_all("mfx")
+```
+
 ## Table 1
 
 Redoing analyses from table 1, but with logit regression and robust standard error for all
@@ -43,7 +48,9 @@ summary_volunteer_data
 # Column (1): dprobit volunteer children
 model1 <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "probit"))
 model1_logistic <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "logit"))
-model1_mfx <- probitmfx(volunteer ~ children, data = summary_volunteer_data)
+model1_mfx <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=TRUE)
+model1_mfx_hc1 <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=TRUE, robust_type="HC1")
+model1_mfx_nonrob <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=FALSE)
 
 # Column (2): dprobit volunteer married
 model2 <- glm(volunteer ~ married, data = summary_volunteer_data, family = binomial(link = "probit"))
@@ -70,6 +77,8 @@ print(coeftest(model1_logistic, vcov = vcovHC(model1, type="HC1")))
 marginal_effects <- margins(model1)
 #print(marginal_effects)
 print(model1_mfx$mfxest)
+print(model1_mfx_hc1$mfxest)
+print(model1_mfx_nonrob$mfxest)
 
 print(coeftest(model2, vcov = vcovHC(model2, type="HC1")))
 print(coeftest(model3, vcov = vcovHC(model3, type="HC1")))
