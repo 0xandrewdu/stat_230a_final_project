@@ -16,6 +16,7 @@ library(MASS)
 library(mfx)
 library(prediction)
 library(assertthat)
+library(xtable)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -32,7 +33,9 @@ library(devtools)
 load_all("mfx")
 ```
 
-## Table 1
+### Probit Marginal Effects
+
+#### Table 1
 
 Redoing analyses from table 1, but with logit regression and robust standard error for all
 
@@ -71,7 +74,7 @@ compare_logit_probit_fit <- function(formula, data) {
   print(summary(model_logit))
 }
 
-compare_logit_probit <- function(formula, data, robust=FALSE, ehw_type="HC1") {
+compare_logit_probit <- function(formula, data, robust=FALSE, ehw_type="HC1", parse=FALSE, regressors=NULL) {
   model_probit <- probitmfx(formula, data=data, robust=robust, robust_type=ehw_type)
   model_logit <- logitmfx(formula, data=data, robust=robust, robust_type=ehw_type)
   
@@ -86,12 +89,45 @@ compare_logit_probit <- function(formula, data, robust=FALSE, ehw_type="HC1") {
     cat("logit model average marginal effect with standard error:", "\n")
     print(model_logit$mfxest)
   }
+  
+  if (parse && !is.null(regressors)) {
+    results <- format_logit_probit_results(model_probit$mfxest, 
+                                         model_logit$mfxest, 
+                                         regressors)
+    return(results)
+  }
+}
+
+format_logit_probit_results <- function(mfxest_log, mfxest_prob, regressors) {
+  df_mfxest_log <- data.frame(mfxest_log)
+  df_mfxest_prob <- data.frame(mfxest_prob)
+  
+  formatted <- data.frame(Info = vector("character", length(regressors)),
+                          row.names=regressors,
+                          stringsAsFactors=FALSE)
+
+  for (feat in regressors) {
+    if (feat %in% rownames(df_mfxest_log)) {
+      se_log <- df_mfxest_log[feat, "Std..Err."]
+      se_prob <- df_mfxest_prob[feat, "Std..Err."]
+      ame_log <- df_mfxest_log[feat, "dF.dx"]
+      ame_prob <- df_mfxest_prob[feat, "dF.dx"]
+      
+      formatted[feat, "Info"] <- sprintf("$\\substack{%.3f / %.3f \\\\ (%.4f / %.4f)}$", 
+                                ame_log, ame_prob, se_log, se_prob)
+      
+      } else {
+        formatted[feat, "Info"] <- ""
+      }
+  }
+  
+  return(formatted)
 }
 
 parse_significance <- function(p_val) {
-  significance <- ifelse(p_val < 0.001, "***",
-                         ifelse(p_val < 0.01, "**",
-                                ifelse(p_val < 0.05, "*", "")))
+  significance <- ifelse(p_val < 0.01, "***",
+                         ifelse(p_val < 0.05, "**",
+                                ifelse(p_val < 0.1, "*", "")))
   return(significance)
 }
 
@@ -118,8 +154,8 @@ format_hci_results <- function(mfxest_se, mfxest_hc0, mfxest_hc1, regressors) {
     
       ame <- df_mfxest_se[feat, "dF.dx"]
       
-      formatted[feat, "Info"] <- sprintf("%.3f \n (%.4f / %.4f / %.4f) %s", 
-                                ame, se, hc0, hc1, signif_se)
+      formatted[feat, "Info"] <- sprintf("$\\substack{%.3f %s \\\\ (%.4f / %.4f / %.4f)}$", 
+                                ame, signif_se, se, hc0, hc1)
       
       } else {
         formatted[feat, "Info"] <- ""
@@ -152,11 +188,26 @@ compare_hci_errors <- function(formula, data, parse=FALSE, regressors=NULL) {
 ```
 
 ```{r}
-dummy <- table_1_formulas[[4]]
-model_probit_se_dummy <- probitmfx(dummy, data=summary_volunteer_data, robust=FALSE)
-print(colnames(data.frame(model_probit_se_dummy$mfxest)))
-data.frame(model_probit_se_dummy$mfxest)['children', 'P..z.']
+child_reg <- glm(children ~ married + bedroom - 1, data=summary_volunteer_data, family=binomial(link="probit"))
+summary(child_reg)
+
+cor(summary_volunteer_data$married, summary_volunteer_data$bedroom)
+cor(summary_volunteer_data$married, summary_volunteer_data$children)
+cor(summary_volunteer_data$bedroom, summary_volunteer_data$children)
 ```
+
+```{r}
+other_formula <- married ~ bedroom
+compare_hci_errors(other_formula, data=summary_volunteer_data)
+```
+
+```{r}
+#other_formula <- volunteer ~ children + married + commute + bedroom
+other_formula <- volunteer ~ married + commute
+compare_hci_errors(other_formula, data=summary_volunteer_data)
+```
+
+Make table 1
 
 ```{r}
 df_table <- data.frame(row.names=table_1_regressors)
@@ -164,13 +215,47 @@ for (f in table_1_formulas) {
   #compare_hci_errors(f, data=summary_volunteer_data, 
   #                   parse=TRUE, 
   #                   regressors=table_1_regressors)
-  df_table <- cbind(df_table, compare_hci_errors(f, data=summary_volunteer_data, parse=TRUE, 
-                     regressors=table_1_regressors))
+  col <- compare_hci_errors(f, data=summary_volunteer_data, parse=TRUE, 
+                     regressors=table_1_regressors)
+  df_table <- cbind(df_table, col)
   #print(compare_hci_errors(f, data=summary_volunteer_data, parse=TRUE, 
   #                   regressors=table_1_regressors))
   #cat("\n")
 }
+colnames(df_table) <- paste0("(", seq_along(df_table), ")")
+latex_table <- xtable(df_table)
+print(latex_table, type="latex", sanitize.text.function = function(x) {x}, tabular.environment = "longtable")
+cat("\n")
 print(df_table)
+```
+
+Generate Table 2, dprobit versus dlogit:
+
+```{r}
+df_table <- data.frame(row.names=table_1_regressors)
+for (f in table_1_formulas) {
+  #compare_hci_errors(f, data=summary_volunteer_data, 
+  #                   parse=TRUE, 
+  #                   regressors=table_1_regressors)
+  col <- compare_logit_probit(f, data=summary_volunteer_data, 
+                              robust=TRUE, 
+                              ehw_type="HC1", 
+                              parse=TRUE, 
+                              regressors=table_1_regressors)
+  df_table <- cbind(df_table, col)
+  #print(compare_hci_errors(f, data=summary_volunteer_data, parse=TRUE, 
+  #                   regressors=table_1_regressors))
+  #cat("\n")
+}
+colnames(df_table) <- paste0("(", seq_along(df_table), ")")
+latex_table_row1 <- xtable(df_table[, c("(1)", "(2)", "(3)", "(4)")])
+latex_table_row2 <- xtable(df_table[, c("(5)", "(6)", "(7)")])
+print(latex_table_row1, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
+print(latex_table_row2, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
+#latex_table <- xtable(df_table)
+#print(latex_table, type="latex", sanitize.text.function = function(x) {x}, tabular.environment = "tabularx")
+# cat("\n")
+print(subset(df_table[, c("(1)", "(2)", "(3)")]))
 ```
 
 ```{r}
@@ -238,12 +323,8 @@ print(coeftest(model5, vcov = vcovHC(model5, type="HC1")))
 print(coeftest(model6, vcov = vcovHC(model6, type="HC1")))
 ```
 
-## Including Plots
+### Fixed Effects Regressions
 
-You can also embed plots, for example:
+```{r}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
 ```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
