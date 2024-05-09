@@ -325,6 +325,42 @@ print(coeftest(model5, vcov = vcovHC(model5, type="HC1")))
 print(coeftest(model6, vcov = vcovHC(model6, type="HC1")))
 ```
 
+#### Table 6
+
+```{r}
+switch_return_data <- read.dta("data/switch_return.dta")
+switch_return_data
+switch_return_data$performance_dif <- switch_return_data$perform11 
+                                    - switch_return_data$perform10
+switch_home_data <- read.dta("data/switch_gohome.dta")
+switch_home_data
+switch_home_data$performance_dif <- switch_home_data$perform11 
+                                    - switch_home_data$perform10
+colnames(switch_home_data)
+```
+
+```{r}
+table_6a_formulas <- c(
+  return ~ perform11,
+  return ~ perform10,
+  return ~ perform11 + perform10,
+  return ~ performance_dif,
+  return ~ perform11 + perform10 + married + livewparents + costofcommute
+)
+
+table_6b_formulas <- c(
+  join ~ perform11,
+  join ~ perform10,
+  join ~ perform11 + perform10,
+  return ~ performance_dif,
+  join ~ perform11 + perform10 + married + livewparents + costofcommute
+)
+```
+
+```{r}
+
+```
+
 ### Fixed Effects Regressions
 
 ```{r}
@@ -361,4 +397,24 @@ yw_cluster_regression <-  felm(perform1 ~ experiment_treatment + as.factor(year_
                           subset=(year_week != 201049 & (expgroup == 1 | expgroup == 0)))
 summary(yw_cluster_regression)
 
+```
+
+Table 4
+
+```{r}
+colnames(exper_perf_data)
+#exper_perf_data$experiment_control <- as.integer(exper_perf_data$expgroup == 0)
+#exper_perf_data$experiment_treatment <- as.integer(exper_perf_data$expgroup == 1 & exper_perf_data$year_week >= 201049)
+#exper_perf_data$experiment_nantong <- as.integer(exper_perf_data$expgroup == 3)
+exper_perf_data
+```
+
+```{r}
+col_1_regression <-  felm(perform1 ~ experiment_treatment 
+                          + experiment_control 
+                          + as.factor(year_week)
+                          | personid | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup != 2)))
+summary(col_1_regression)
 ```
