@@ -17,6 +17,7 @@ library(mfx)
 library(prediction)
 library(assertthat)
 library(xtable)
+library(lfe)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -26,6 +27,7 @@ install.packages("/Users/du/Documents/sp24/stat230a/final_project/wfh/prediction
 install.packages("/Users/du/Documents/sp24/stat230a/final_project/wfh/margins_0.3.26.1.tar.gz", type = "source", repos = NULL)
 library(prediction)
 library(margins)
+library(haven)
 ```
 
 ```{r}
@@ -326,5 +328,37 @@ print(coeftest(model6, vcov = vcovHC(model6, type="HC1")))
 ### Fixed Effects Regressions
 
 ```{r}
+exper_perf_data <- read_dta("data/performance_during_exper.dta")
+exper_perf_data
+```
+
+```{r}
+table_2_targets <- c(
+  "perform1"
+)
+table_2_regressors <- c(
+  c("experiment_treatment", "year_week", "personid")
+)
+```
+
+```{r}
+cols_used <- c(table_2_regressors[1], table_2_targets[1])
+table_2_regressors[1]
+cols_used
+```
+
+```{r}
+
+col_1_regression <-  felm(perform1 ~ experiment_treatment + as.factor(year_week)
+                          | personid | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup == 1 | expgroup == 0)))
+summary(col_1_regression)
+
+yw_cluster_regression <-  felm(perform1 ~ experiment_treatment + as.factor(year_week)
+                          | personid | 0 | year_week + experiment_treatment, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup == 1 | expgroup == 0)))
+summary(yw_cluster_regression)
 
 ```
