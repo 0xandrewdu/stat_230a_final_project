@@ -167,6 +167,47 @@ format_hci_results <- function(mfxest_se, mfxest_hc0, mfxest_hc1, regressors) {
   return(formatted)
 }
 
+dprobit <- function(formula, 
+                    data, 
+                    parse=FALSE, 
+                    regressors=NULL, 
+                    robust=TRUE, 
+                    robust_type="HC1") {
+  model_probit <- probitmfx(formula, data=data, robust=robust, robust_type=robust_type)
+  print(model_probit$mfxest)
+  
+  if (parse && !is.null(regressors)) {
+    results <- format_dprobit_results(model_probit$mfxest, 
+                                         regressors)
+    return(results)
+  }
+}
+
+format_dprobit_results <- function(mfxest, regressors) {
+  df_mfxest <- data.frame(mfxest)
+  
+  formatted <- data.frame(Info = vector("character", length(regressors)),
+                          row.names=regressors,
+                          stringsAsFactors=FALSE)
+
+  for (feat in regressors) {
+    if (feat %in% rownames(df_mfxest)) {
+      signif <- parse_significance(df_mfxest[feat, "P..z."])
+      
+      se <- df_mfxest[feat, "Std..Err."]
+      ame <- df_mfxest[feat, "dF.dx"]
+      
+      formatted[feat, "Info"] <- sprintf("$\\substack{ %.3f %s \\\\ (%.4f) }$", 
+                                ame, signif, se)
+      
+      } else {
+        formatted[feat, "Info"] <- ""
+      }
+  }
+  
+  return(formatted)
+}
+
 compare_hci_errors <- function(formula, data, parse=FALSE, regressors=NULL) {
   model_probit_se <- probitmfx(formula, data=data, robust=FALSE)
   model_probit_hc0 <- probitmfx(formula, data=data, robust=TRUE, robust_type="HC0")
@@ -231,7 +272,7 @@ cat("\n")
 print(df_table)
 ```
 
-Generate Table 2, dprobit versus dlogit:
+Generate dprobit versus dlogit:
 
 ```{r}
 df_table <- data.frame(row.names=table_1_regressors)
@@ -260,71 +301,6 @@ print(latex_table_row2, type="latex", sanitize.text.function = function(x) {x}, 
 print(subset(df_table[, c("(1)", "(2)", "(3)")]))
 ```
 
-```{r}
-
-formula <- volunteer ~ children + married + commute + bedroom
-
-compare_logit_probit(formula, data = summary_volunteer_data, robust=TRUE, ehw_type="HC0")
-
-cat("\n")
-
-compare_logit_probit(formula, data = summary_volunteer_data, robust=TRUE, ehw_type="HC1")
-
-cat("\n")
-
-compare_logit_probit_fit(formula, data=summary_volunteer_data)
-```
-
-```{r}
-for (f in table_1_formulas) {
-  print(f)
-}
-```
-
-```{r}
-
-# Column (1): dprobit volunteer children
-model1 <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "probit"))
-model1_logistic <- glm(volunteer ~ children, data = summary_volunteer_data, family = binomial(link = "logit"))
-model1_mfx <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=TRUE)
-model1_mfx_hc1 <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=TRUE, robust_type="HC1")
-model1_mfx_nonrob <- probitmfx(volunteer ~ children, data = summary_volunteer_data, robust=FALSE)
-
-# Column (2): dprobit volunteer married
-model2 <- glm(volunteer ~ married, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-# Column (3): dprobit volunteer children married commute bedroom
-model3 <- glm(volunteer ~ children + married + commute + bedroom, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-# Column (4): dprobit volunteer children married commute bedroom high_educ tenure
-model4 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-# Column (5): dprobit volunteer children married commute bedroom high_educ tenure grosswage
-model5 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure + grosswage, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-# Column (6): dprobit volunteer grosswage
-model6 <- glm(volunteer ~ grosswage, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-# Column (7): dprobit volunteer children married commute bedroom high_educ tenure grosswage age men
-model7 <- glm(volunteer ~ children + married + commute + bedroom + high_educ + tenure + grosswage + age + men, data = summary_volunteer_data, family = binomial(link = "probit"))
-
-print(coeftest(model1, vcov = vcovHC(model1, type="HC1")))
-
-print(coeftest(model1_logistic, vcov = vcovHC(model1, type="HC1")))
-
-marginal_effects <- margins(model1)
-#print(marginal_effects)
-print(model1_mfx$mfxest)
-print(model1_mfx_hc1$mfxest)
-print(model1_mfx_nonrob$mfxest)
-
-print(coeftest(model2, vcov = vcovHC(model2, type="HC1")))
-print(coeftest(model3, vcov = vcovHC(model3, type="HC1")))
-print(coeftest(model4, vcov = vcovHC(model4, type="HC1")))
-print(coeftest(model5, vcov = vcovHC(model5, type="HC1")))
-print(coeftest(model6, vcov = vcovHC(model6, type="HC1")))
-```
-
 #### Table 6
 
 ```{r}
@@ -344,27 +320,48 @@ table_6a_formulas <- c(
   return ~ perform11,
   return ~ perform10,
   return ~ perform11 + perform10,
+  return ~ perform11 + perform10 + married + livewparents + costofcommute,
   return ~ performance_dif,
-  return ~ perform11 + perform10 + married + livewparents + costofcommute
+  return ~ performance_dif + married + livewparents + costofcommute
 )
 
 table_6b_formulas <- c(
   join ~ perform11,
   join ~ perform10,
   join ~ perform11 + perform10,
-  return ~ performance_dif,
+  join ~ performance_dif,
   join ~ perform11 + perform10 + married + livewparents + costofcommute
+)
+
+table_6_regressors <- c(
+  "perform11",
+  "perform10",
+  "performance_dif",
+  "married",
+  "livewparents",
+  "costofcommute"
 )
 ```
 
 ```{r}
-
+df_table <- data.frame(row.names=table_6_regressors)
+for (f in table_6a_formulas) {
+  df_table <- cbind(df_table, dprobit(f, data=switch_return_data, robust=TRUE, parse=TRUE, regressors=table_6_regressors))
+  cat("\n")
+}
+colnames(df_table) <- paste0("(", seq_along(df_table), ")")
+latex_table <- xtable(df_table)
+print(latex_table, type="latex", sanitize.text.function = function(x) {x})
+cat("\n")
+print(df_table)
 ```
 
 ### Fixed Effects Regressions
 
 ```{r}
 exper_perf_data <- read_dta("data/performance_during_exper.dta")
+exper_perf_data$during_experiment <- as.integer(exper_perf_data$year_week >= 201049)
+exper_perf_data$experiment_treatment_during <- exper_perf_data$during_experiment * exper_perf_data$experiment_treatment
 exper_perf_data
 ```
 
@@ -385,11 +382,17 @@ cols_used
 
 ```{r}
 
-col_1_regression <-  felm(perform1 ~ experiment_treatment + as.factor(year_week)
+col_1_regression <-  felm(perform1 ~ experiment_treatment *  + experiment_control + as.factor(year_week)
                           | personid | 0 | personid, 
                           data=exper_perf_data, 
                           subset=(year_week != 201049 & (expgroup == 1 | expgroup == 0)))
 summary(col_1_regression)
+
+col_1_regression_absorb_time <-  felm(perform1 ~ experiment_treatment + experiment_control
+                          | personid + year_week | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup == 1 | expgroup == 0)))
+summary(col_1_regression_absorb_time)
 
 yw_cluster_regression <-  felm(perform1 ~ experiment_treatment + as.factor(year_week)
                           | personid | 0 | year_week + experiment_treatment, 
@@ -410,7 +413,7 @@ exper_perf_data
 ```
 
 ```{r}
-col_1_regression <-  felm(perform1 ~ experiment_treatment 
+col_1_regression <-  felm(perform1 ~ experiment_treatment_during
                           + experiment_control 
                           + as.factor(year_week)
                           | personid | 0 | personid, 
