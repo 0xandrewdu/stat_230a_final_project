@@ -47,7 +47,6 @@ Original table:
 summary_volunteer_data <- read.dta("data/summary_volunteer.dta")
 summary_volunteer_data$children <- ifelse(summary_volunteer_data$children == "yes", 1.0, 0.0)
 summary_volunteer_data$bedroom <- ifelse(summary_volunteer_data$bedroom == "yes", 1.0, 0.0)
-summary_volunteer_data
 ```
 
 ```{r}
@@ -64,7 +63,7 @@ table_1_formulas <- list(
 table_1_regressors <- c("age", "tenure", "grosswage", "children", "bedroom", "commute", "men", "married", "high_educ")
 ```
 
-```{r}
+```{r R.options=list(max.print=10)}
 
 compare_logit_probit_fit <- function(formula, data) {
   model_probit <- glm(formula, data=data, family=binomial(link="probit"))
@@ -252,7 +251,7 @@ compare_hci_errors(other_formula, data=summary_volunteer_data)
 
 Make table 1
 
-```{r}
+```{r R.options=list(max.print=5)}
 df_table <- data.frame(row.names=table_1_regressors)
 for (f in table_1_formulas) {
   #compare_hci_errors(f, data=summary_volunteer_data, 
@@ -269,12 +268,12 @@ colnames(df_table) <- paste0("(", seq_along(df_table), ")")
 latex_table <- xtable(df_table)
 print(latex_table, type="latex", sanitize.text.function = function(x) {x}, tabular.environment = "longtable")
 cat("\n")
-print(df_table)
+#print(df_table)
 ```
 
 Generate dprobit versus dlogit:
 
-```{r}
+```{r R.options=list(max.print=5)}
 df_table <- data.frame(row.names=table_1_regressors)
 for (f in table_1_formulas) {
   #compare_hci_errors(f, data=summary_volunteer_data, 
@@ -293,26 +292,26 @@ for (f in table_1_formulas) {
 colnames(df_table) <- paste0("(", seq_along(df_table), ")")
 latex_table_row1 <- xtable(df_table[, c("(1)", "(2)", "(3)", "(4)")])
 latex_table_row2 <- xtable(df_table[, c("(5)", "(6)", "(7)")])
-print(latex_table_row1, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
-print(latex_table_row2, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
+#print(latex_table_row1, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
+#print(latex_table_row2, type="latex", sanitize.text.function = function(x) {x}, tabular.environment="tabularx")
 #latex_table <- xtable(df_table)
 #print(latex_table, type="latex", sanitize.text.function = function(x) {x}, tabular.environment = "tabularx")
 # cat("\n")
-print(subset(df_table[, c("(1)", "(2)", "(3)")]))
+#print(subset(df_table[, c("(1)", "(2)", "(3)")]))
 ```
 
 #### Table 6
 
 ```{r}
 switch_return_data <- read.dta("data/switch_return.dta")
-switch_return_data
+#switch_return_data
 switch_return_data$performance_dif <- switch_return_data$perform11 
                                     - switch_return_data$perform10
 switch_home_data <- read.dta("data/switch_gohome.dta")
-switch_home_data
+#switch_home_data
 switch_home_data$performance_dif <- switch_home_data$perform11 
                                     - switch_home_data$perform10
-colnames(switch_home_data)
+#colnames(switch_home_data)
 ```
 
 ```{r}
@@ -329,8 +328,9 @@ table_6b_formulas <- c(
   join ~ perform11,
   join ~ perform10,
   join ~ perform11 + perform10,
+  join ~ perform11 + perform10 + married + livewparents + costofcommute,
   join ~ performance_dif,
-  join ~ perform11 + perform10 + married + livewparents + costofcommute
+  join ~ performance_dif + married + livewparents + costofcommute
 )
 
 table_6_regressors <- c(
@@ -343,7 +343,7 @@ table_6_regressors <- c(
 )
 ```
 
-```{r}
+```{r R.options=list(max.print=40)}
 df_table <- data.frame(row.names=table_6_regressors)
 for (f in table_6a_formulas) {
   df_table <- cbind(df_table, dprobit(f, data=switch_return_data, robust=TRUE, parse=TRUE, regressors=table_6_regressors))
@@ -354,6 +354,17 @@ latex_table <- xtable(df_table)
 print(latex_table, type="latex", sanitize.text.function = function(x) {x})
 cat("\n")
 print(df_table)
+
+df_table <- data.frame(row.names=table_6_regressors)
+for (f in table_6b_formulas) {
+  df_table <- cbind(df_table, dprobit(f, data=switch_home_data, robust=TRUE, parse=TRUE, regressors=table_6_regressors))
+  cat("\n")
+}
+colnames(df_table) <- paste0("(", seq_along(df_table), ")")
+latex_table <- xtable(df_table)
+#print(latex_table, type="latex", sanitize.text.function = function(x) {x})
+#cat("\n")
+#print(df_table)
 ```
 
 ### Fixed Effects Regressions
@@ -362,7 +373,7 @@ print(df_table)
 exper_perf_data <- read_dta("data/performance_during_exper.dta")
 exper_perf_data$during_experiment <- as.integer(exper_perf_data$year_week >= 201049)
 exper_perf_data$experiment_treatment_during <- exper_perf_data$during_experiment * exper_perf_data$experiment_treatment
-exper_perf_data
+#exper_perf_data
 ```
 
 ```{r}
@@ -377,10 +388,10 @@ table_2_regressors <- c(
 ```{r}
 cols_used <- c(table_2_regressors[1], table_2_targets[1])
 table_2_regressors[1]
-cols_used
+#cols_used
 ```
 
-```{r}
+```{r R.options=list(max.print=40)}
 
 col_1_regression <-  felm(perform1 ~ experiment_treatment *  + experiment_control + as.factor(year_week)
                           | personid | 0 | personid, 
@@ -409,10 +420,10 @@ colnames(exper_perf_data)
 #exper_perf_data$experiment_control <- as.integer(exper_perf_data$expgroup == 0)
 #exper_perf_data$experiment_treatment <- as.integer(exper_perf_data$expgroup == 1 & exper_perf_data$year_week >= 201049)
 #exper_perf_data$experiment_nantong <- as.integer(exper_perf_data$expgroup == 3)
-exper_perf_data
+#exper_perf_data
 ```
 
-```{r}
+```{r R.options=list(max.print=40)}
 col_1_regression <-  felm(perform1 ~ experiment_treatment_during
                           + experiment_control 
                           + as.factor(year_week)
