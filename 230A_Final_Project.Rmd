@@ -420,4 +420,28 @@ col_1_regression <-  felm(perform1 ~ experiment_treatment_during
                           data=exper_perf_data, 
                           subset=(year_week != 201049 & (expgroup != 2)))
 summary(col_1_regression)
+
+col_2_regression <-  felm(phonecall ~ experiment_treatment_during
+                          + experiment_control 
+                          + as.factor(year_week)
+                          | personid | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup != 2)))
+summary(col_2_regression)
+
+col_3_regression <-  felm(perform1 ~ experiment_treatment_during
+                          + experiment_control 
+                          + as.factor(year_week)
+                          | personid | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup != 3)))
+summary(col_3_regression)
+
+col_4_regression <-  felm(phonecall ~ experiment_treatment_during
+                          + experiment_control 
+                          + as.factor(year_week)
+                          | personid | 0 | personid, 
+                          data=exper_perf_data, 
+                          subset=(year_week != 201049 & (expgroup != 3)))
+summary(col_4_regression)
 ```
